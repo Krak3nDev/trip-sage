@@ -36,16 +36,13 @@ class OpenAIAdapter:
             parts.append(f"Please do NOT include: {', '.join(req.exclude)}.")
         if req.num_places:
             parts.append(f"Return exactly {req.num_places} places.")
-        else:
-            parts.append("Return 4 places.")
-
+            
         return [
             {"role": "system", "content": self._SYSTEM_PROMPT},
             {"role": "user", "content": " ".join(parts)},
         ]
 
     async def generate(self, req: RecommendationRequest) -> list[PlaceSchema]:
-        logging.error("test")
         async for attempt in AsyncRetrying(
             stop=stop_after_attempt(self._openai_config.max_retries),
             wait=wait_exponential(multiplier=1, min=2, max=10),
