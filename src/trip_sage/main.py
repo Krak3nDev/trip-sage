@@ -16,27 +16,26 @@ from trip_sage.log import setup_logging
 from trip_sage.persistence.models import Base
 
 
-def db_startup_lifespan(
-    container: AsyncContainer, db_config: SqliteConfig
-) -> Callable[[FastAPI], AsyncContextManager[None]]:
-    @asynccontextmanager
-    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-        engine: AsyncEngine = await container.get(AsyncEngine)
 
-        db_path = Path(db_config.path).expanduser().resolve()
-        need_migrations = not db_path.exists()
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    container = app.state.dishka_container
+    db_config = await container.get(SqliteConfig)
+    engine: AsyncEngine = await container.get(AsyncEngine)
 
-        if need_migrations:
-            async with engine.begin() as conn:
-                logging.error(Base.metadata.tables)
-                await conn.run_sync(Base.metadata.create_all)
+    db_path = Path(db_config.path).expanduser().resolve()
+    need_migrations = not db_path.exists()
 
-        yield
+    if need_migrations:
+        async with engine.begin() as conn:
+            logging.error(Base.metadata.tables)
+            await conn.run_sync(Base.metadata.create_all)
 
-        await engine.dispose()
-        await container.close()
+    yield
 
-    return lifespan
+    await engine.dispose()
+    await container.close()
+
 
 
 def create_app() -> FastAPI:
@@ -46,7 +45,7 @@ def create_app() -> FastAPI:
 
     app = FastAPI(
         title="Travel Recommender API",
-        lifespan=db_startup_lifespan(container=container, db_config=cfg.db),
+        lifespan=lifespan,
     )
 
     register_exception_handlers(app=app)
