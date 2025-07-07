@@ -37,7 +37,7 @@ class OpenAIAdapter:
         if req.num_places:
             parts.append(f"Return exactly {req.num_places} places.")
         else:
-            parts.append("Return 3–4 places.")
+            parts.append("Return 4 places.")
 
         return [
             {"role": "system", "content": self._SYSTEM_PROMPT},
@@ -63,8 +63,6 @@ class OpenAIAdapter:
                     messages=self._build_messages(req),
                 )
 
-                logging.error(resp)
-
                 raw = resp.choices[0].message.content.strip()
 
                 try:
@@ -73,7 +71,6 @@ class OpenAIAdapter:
                     places = data["places"]
 
                     if req.num_places and len(places) != req.num_places:
-                        logging.error("invalid")
                         raise InvalidLLMResponse(
                             f"Expected {req.num_places} places, got {len(data)}"
                         )
@@ -81,8 +78,7 @@ class OpenAIAdapter:
                     places = [
                         PlaceSchema.model_validate(item) for item in places
                     ]
-                    logging.error("after validation")
-
+                    
                     return places
 
                 except json.JSONDecodeError as exc:
